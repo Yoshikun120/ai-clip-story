@@ -1,0 +1,162 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b0b10">
+<title>AI Clip Story</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#0b0b10;color:#f7f7fb;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+}
+main{max-width:760px;margin:auto;padding:24px 17px 60px}
+.logo{font-size:14px;letter-spacing:2px;color:#aaa}
+h1{font-size:35px;line-height:1.15;margin:30px 0 12px}
+p{color:#aaa;line-height:1.7}
+.panel{background:#15151e;border:1px solid #2a2a37;
+  padding:18px;border-radius:18px;margin-top:22px}
+label{display:block;margin:14px 0 8px;font-size:14px}
+input,select,textarea{
+  width:100%;padding:14px;border-radius:11px;
+  border:1px solid #383846;background:#0e0e15;
+  color:white;font-size:16px;
+}
+button{
+  width:100%;padding:15px;border:0;border-radius:12px;
+  background:#b6a1ff;color:#171222;font-weight:700;
+  font-size:16px;margin-top:14px;
+}
+button:disabled{opacity:.5}
+.small{font-size:12px;color:#9696a5}
+#status{white-space:pre-wrap;line-height:1.7}
+#result{display:none}
+.tag{display:inline-block;border:1px solid #454554;
+  border-radius:20px;padding:5px 9px;font-size:12px;color:#ccc}
+.scene{border-top:1px solid #30303a;padding:13px 0}
+a{color:#c5b4ff;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+<main>
+  <div class="logo">✦ AI CLIP STORY</div>
+  <h1>เปลี่ยนคลิป<br>ให้กลายเป็นเรื่องเล่า</h1>
+  <p>วางลิงก์คลิป เพื่อเริ่มสร้างบทสรุปแบบเล่าเรื่อง
+  พร้อมเตรียมต่อยอดเป็นเสียงพากย์และวิดีโอใหม่</p>
+
+  <section class="panel">
+    <span class="tag">PROTOTYPE V1</span>
+    <label for="url">ลิงก์วิดีโอ</label>
+    <input id="url" type="url"
+      placeholder="วางลิงก์ YouTube / TikTok / Instagram">
+    <label for="style">สไตล์การเล่า</label>
+    <select id="style">
+      <option>สปอยหนังแบบสนุกและเข้าใจง่าย</option>
+      <option>ลึกลับ ชวนติดตาม</option>
+      <option>ตื่นเต้น ดุดัน</option>
+      <option>สรุปสาระตรงประเด็น</option>
+    </select>
+    <label for="length">ความยาวบท</label>
+    <select id="length">
+      <option value="short">สั้น ประมาณ 1 นาที</option>
+      <option value="medium" selected>กลาง ประมาณ 3 นาที</option>
+      <option value="long">ยาว ประมาณ 5 นาที</option>
+    </select>
+    <button id="analyze">ตรวจสอบลิงก์</button>
+    <div id="status" class="small" aria-live="polite"></div>
+    <div id="preview"></div>
+  </section>
+
+  <section id="result" class="panel">
+    <h2>พื้นที่ผลลัพธ์ AI</h2>
+    <p id="source"></p>
+    <div class="scene">
+      <strong>บทสรุปจาก AI</strong>
+      <p id="script">ยังไม่มีบทวิเคราะห์จริง กรุณาเชื่อมระบบ AI ก่อน</p>
+    </div>
+    <div class="scene">
+      <strong>เสียงพากย์</strong>
+      <p>ระบบเสียงพากย์จะพร้อมใช้งานเมื่อเชื่อมต่อบริการสร้างเสียง</p>
+      <audio id="audio" controls style="width:100%;display:none"></audio>
+    </div>
+    <div class="scene">
+      <strong>วิดีโอสรุป</strong>
+      <p>ระบบประกอบวิดีโอจะเปิดใช้งานหลังเชื่อมต่อระบบประมวลผลวิดีโอ</p>
+      <video id="video" controls playsinline
+        style="width:100%;display:none"></video>
+    </div>
+  </section>
+
+  <p class="small">หมายเหตุ: เวอร์ชันนี้ยังไม่ส่งข้อมูลไปวิเคราะห์ด้วย AI
+  และไม่ได้ดาวน์โหลดวิดีโอจากแพลตฟอร์ม</p>
+</main>
+
+<script>
+const urlInput = document.getElementById("url");
+const statusBox = document.getElementById("status");
+const preview = document.getElementById("preview");
+const result = document.getElementById("result");
+
+function detectPlatform(raw) {
+  let u;
+  try { u = new URL(raw); } catch { return null; }
+  const host = u.hostname.toLowerCase().replace(/^www\./, "");
+  if (host === "youtube.com" || host === "youtu.be" ||
+      host === "m.youtube.com") return "YouTube";
+  if (host === "tiktok.com" || host.endsWith(".tiktok.com"))
+    return "TikTok";
+  if (host === "instagram.com" || host.endsWith(".instagram.com"))
+    return "Instagram";
+  return null;
+}
+
+document.getElementById("analyze").addEventListener("click", () => {
+  const raw = urlInput.value.trim();
+  preview.innerHTML = "";
+  result.style.display = "none";
+
+  const platform = detectPlatform(raw);
+  if (!platform) {
+    statusBox.textContent =
+      "กรุณาใส่ลิงก์ YouTube, TikTok หรือ Instagram ที่ถูกต้อง";
+    return;
+  }
+
+  statusBox.textContent =
+    "ตรวจพบแพลตฟอร์ม: " + platform +
+    "\nลิงก์ผ่านการตรวจสอบรูปแบบแล้ว แต่ยังไม่ได้วิเคราะห์เนื้อหาคลิป";
+
+  document.getElementById("source").textContent =
+    "แหล่งที่มา: " + platform + " — " + raw;
+
+  if (platform === "YouTube") {
+    try {
+      const u = new URL(raw);
+      let id = u.hostname.includes("youtu.be")
+        ? u.pathname.slice(1)
+        : u.searchParams.get("v");
+      if (u.pathname.startsWith("/shorts/"))
+        id = u.pathname.split("/")[2];
+      if (id && /^[\w-]{11}$/.test(id)) {
+        const frame = document.createElement("iframe");
+        frame.src = "https://www.youtube-nocookie.com/embed/" +
+          encodeURIComponent(id);
+        frame.title = "YouTube video preview";
+        frame.allow =
+          "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+        frame.allowFullscreen = true;
+        frame.style.cssText =
+          "width:100%;aspect-ratio:16/9;border:0;border-radius:12px;margin-top:14px";
+        preview.appendChild(frame);
+      }
+    } catch {}
+  }
+
+  result.style.display = "block";
+  result.scrollIntoView({behavior:"smooth",block:"start"});
+});
+</script>
+</body>
+</html>
